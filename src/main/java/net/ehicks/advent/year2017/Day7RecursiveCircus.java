@@ -3,22 +3,115 @@ package net.ehicks.advent.year2017;
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Paths;
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.List;
+import java.util.*;
+import java.util.stream.Collectors;
 
 public class Day7RecursiveCircus {
     public static void main(String[] args) throws IOException
     {
         List<String> rows = Files.readAllLines(Paths.get("src/main/resources/year2017/07.txt"));
 
-        Program root = parsePrograms(rows);
-        System.out.println("part 1: " + root.name);
+        List<Program> programs = parsePrograms(rows);
+        Program root = findRootProgram(programs);
 
-//        System.out.println("part 2: " + infiniteCycleSize);
+        System.out.println("part 1: " + root);
+
+        getTowerWeights(programs, root);
+
+        String misweightedProgram = findMisweightedProgram(programs, root);
+
+        System.out.println("part 2: (answer of '1505' was found by stepping through debugger)");
     }
 
-    public static Program parsePrograms(List<String> rows)
+
+    public static String findMisweightedProgram(List<Program> programs, Program root)
+    {
+        String misweightedProgram = "";
+
+        Map<Integer, List<String>> weightToName = new HashMap<>();
+        for (String childName : root.children)
+        {
+            Program child = getProgramByName(programs, childName);
+            List<String> names = weightToName.get(child.towerWeight);
+            if (names == null)
+                names = new ArrayList<>();
+            names.add(child.name);
+            weightToName.put(child.towerWeight, names);
+        }
+
+        weightToName.entrySet().removeIf(integerListEntry -> integerListEntry.getValue().size() > 1);
+        List<String> possibleMisweightedChildNames = weightToName.values().stream()
+                .flatMap(List::stream).collect(Collectors.toList());
+
+        for (String childName : possibleMisweightedChildNames)
+        {
+            Program child = getProgramByName(programs, childName);
+            misweightedProgram = findMisweightedProgramInner(programs, child);
+        }
+
+        return misweightedProgram;
+    }
+
+    public static String findMisweightedProgramInner(List<Program> programs, Program root)
+    {
+        if (root.children.isEmpty())
+            return "";
+
+        String misweightedProgram = "";
+
+        Map<Integer, List<String>> weightToName = new HashMap<>();
+        for (String childName : root.children)
+        {
+            Program child = getProgramByName(programs, childName);
+            List<String> names = weightToName.get(child.towerWeight);
+            if (names == null)
+                names = new ArrayList<>();
+            names.add(child.name);
+            weightToName.put(child.towerWeight, names);
+        }
+
+        weightToName.entrySet().removeIf(integerListEntry -> integerListEntry.getValue().size() > 1);
+        List<String> possibleMisweightedChildNames = weightToName.values().stream()
+                .flatMap(List::stream).collect(Collectors.toList());
+
+        for (String childName : possibleMisweightedChildNames)
+        {
+            Program child = getProgramByName(programs, childName);
+            misweightedProgram = findMisweightedProgramInner(programs, child);
+        }
+
+        return misweightedProgram;
+    }
+
+    public static void getTowerWeights(List<Program> programs, Program root)
+    {
+        int totalWeight = 0;
+
+        for (String childName : root.children)
+        {
+            Program child = getProgramByName(programs, childName);
+            totalWeight += getTowerWeightsInner(programs, child);
+        }
+        root.towerWeight = totalWeight;
+    }
+
+    public static int getTowerWeightsInner(List<Program> programs, Program root)
+    {
+        if (root.children.isEmpty())
+            return root.weight;
+
+        int totalChildrenWeight = 0;
+
+        for (String childName : root.children)
+        {
+            Program child = getProgramByName(programs, childName);
+            totalChildrenWeight += getTowerWeightsInner(programs, child);
+        }
+        root.towerWeight += totalChildrenWeight;
+        return root.towerWeight;
+    }
+
+    public static List<Program> parsePrograms(List<String> rows)
     {
         List<Program> programs = new ArrayList<>();
 
@@ -40,14 +133,13 @@ public class Day7RecursiveCircus {
 
             Program program = new Program(name);
             program.weight = weight;
+            program.towerWeight = weight;
             program.children = childrenNames;
 
             programs.add(program);
         }
 
-        Program root = findRootProgram(programs);
-
-        return root;
+        return programs;
     }
 
     private static Program findRootProgram(List<Program> programs) {
@@ -72,6 +164,7 @@ public class Day7RecursiveCircus {
     {
         String name;
         int weight;
+        int towerWeight;
         List<String> children = new ArrayList<>();
 
         public Program(String name) {
