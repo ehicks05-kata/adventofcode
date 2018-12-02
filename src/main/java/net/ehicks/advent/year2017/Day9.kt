@@ -5,7 +5,7 @@ import java.nio.file.Path
 import java.util.*
 
 fun main() {
-    val path: Path = Path.of("aoc-kotlin", "src", "main", "kotlin", "net", "ehicks", "advent", "year2017", "input.txt")
+    val path: Path = Path.of("src", "main", "resources", "year2017", "09.txt")
     val input: String = Files.readString(path)
 
     solveInput(input)
