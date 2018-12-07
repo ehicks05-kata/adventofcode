@@ -2,44 +2,84 @@ package net.ehicks.advent.year2017
 
 import java.nio.file.Files
 import java.nio.file.Path
-import java.util.stream.IntStream
-import kotlin.streams.toList
 
 fun main() {
 
     val path: Path = Path.of("src", "main", "resources", "year2017", "10.txt")
-    val input: String = Files.readString(path)
+    val input: String = Files.readString(path).replace("\n", "")
 
-    solveInput("3,4,1,5", 5)
-    solveInput(input, 256)
+    solveInput("1,2,4")
+    solveInput(input)
 }
 
-private fun solveInput(input: String, listSize: Int) {
-    val list = IntStream.range(0, listSize).toList().toMutableList()
-    var position = 0
-    var skipSize = 0
+private fun solveInput(input: String) {
+    var hashState = HashState(MutableList(256) { index -> index }, 0, 0, 0)
 
     input.split(",")
-            .map { it.replace("\n", "").toInt() }
-            .forEach {
-                var reverseFrom = position
-                var reverseTo = position + it - 1
-
-                while (reverseFrom < reverseTo) {
-                    val from = reverseFrom % list.size
-                    val to = reverseTo % list.size
-
-                    val temp = list[from]
-                    list[from] = list[to]
-                    list[to] = temp
-
-                    reverseFrom++
-                    reverseTo--
-                }
-
-                position += (it + skipSize) % list.size
-                skipSize++
+            .map { it.toInt() }
+            .forEach { inputLength ->
+                hashState.inputLength = inputLength
+                hashRound(hashState)
             }
 
-    println(list[0] * list[1])
+    println("part 1: " + hashState.list[0] * hashState.list[1])
+
+    hashState = HashState(MutableList(256) { index -> index }, 0, 0, 0)
+
+    val sequence = input.split("")
+            .filter { it.isNotEmpty() }
+            .map { it.single().toInt() }
+            .plus(listOf(17, 31, 73, 47, 23))
+
+    for (i in 0 until 64) {
+        sequence.forEach { inputLength ->
+            hashState.inputLength = inputLength
+            hashRound(hashState)
+        }
+    }
+
+    val denseHash = mutableListOf<Int>()
+    var temp = 0
+    hashState.list.forEachIndexed { index, i ->
+        temp = temp.xor(i)
+        if ((index + 1) % 16 == 0) {
+            denseHash.add(temp)
+            temp = 0
+        }
+    }
+
+    val knotHash = denseHash.joinToString(separator = "") {
+        val hex = it.toString(16)
+        if (hex.length == 1)
+            "0$hex"
+        else
+            hex
+    }
+
+    println("part 2: $knotHash")
 }
+
+private fun hashRound(hashState: HashState): HashState {
+    hashState.apply {
+        var reverseFrom = position
+        var reverseTo = position + inputLength - 1
+
+        while (reverseFrom < reverseTo) {
+            val from = reverseFrom % list.size
+            val to = reverseTo % list.size
+
+            val temp = list[from]
+            list[from] = list[to]
+            list[to] = temp
+
+            reverseFrom++
+            reverseTo--
+        }
+
+        position += (inputLength + skipSize) % list.size
+        skipSize++
+        return hashState
+    }
+}
+
+private data class HashState(var list: MutableList<Int>, var inputLength: Int, var position: Int, var skipSize: Int)
