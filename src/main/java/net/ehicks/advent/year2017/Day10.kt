@@ -13,7 +13,7 @@ fun main() {
 }
 
 private fun solveInput(input: String) {
-    var hashState = HashState(MutableList(256) { index -> index }, 0, 0, 0)
+    val hashState = HashState(MutableList(256) { index -> index }, 0, 0, 0)
 
     input.split(",")
             .map { it.toInt() }
@@ -24,12 +24,21 @@ private fun solveInput(input: String) {
 
     println("part 1: " + hashState.list[0] * hashState.list[1])
 
-    hashState = HashState(MutableList(256) { index -> index }, 0, 0, 0)
+    val knotHash = knotHash(input)
 
-    val sequence = input.split("")
+    println("part 2: $knotHash")
+}
+
+private fun stringToAsciiList(input: String): List<Int> {
+    return input.split("")
             .filter { it.isNotEmpty() }
             .map { it.single().toInt() }
             .plus(listOf(17, 31, 73, 47, 23))
+}
+
+public fun knotHash(input: String): String {
+    val sequence = stringToAsciiList(input)
+    val hashState = HashState(MutableList(256) { index -> index }, 0, 0, 0)
 
     for (i in 0 until 64) {
         sequence.forEach { inputLength ->
@@ -55,8 +64,7 @@ private fun solveInput(input: String) {
         else
             hex
     }
-
-    println("part 2: $knotHash")
+    return knotHash
 }
 
 private fun hashRound(hashState: HashState): HashState {
