@@ -4,6 +4,8 @@ import edu.princeton.cs.algs4.StdDraw
 import java.awt.Color
 import java.nio.file.Files
 import java.nio.file.Path
+import java.nio.file.Paths
+import kotlin.random.Random
 
 fun main() {
     val path: Path = Path.of("src", "main", "resources", "year2018", "17.txt")
@@ -17,55 +19,59 @@ private fun solveInput(input: List<String>) {
     val spring = Point2D(500, 0, false)
     val water = mutableListOf<Point2D>()
 
-    draw(map, water)
+//    Files.delete(Paths.get("17-temp.png"))
+//    draw(map, water)
+//    Thread.sleep(1000)
+//    StdDraw.save("17-temp.png")
 
-    var loop = 0
-    while (true) {
-        water.sortWith(BottomSort())
-        water.forEach { it.deferred = false }
-//        water.forEach { it.blocked = false }
-        draw(map, water)
+    for (loop in 0..Int.MAX_VALUE) {
+        water.forEach { it.moved = false }
 
-        // move each unsettled water
-        water.filter { !it.settled }.forEach { droplet ->
+//        if (loop % 1000 == 0)
+            draw(map, water)
 
-            when {
-                isClearBelow(water, droplet, map) -> droplet.y += 1
-                isClearLeft(map, droplet, water) -> droplet.x -= 1
-                isClearRight(map, droplet, water) -> droplet.x += 1
+        for (row in water.groupBy { it.y }.keys.sortedDescending()) {
 
-                else -> {
-                    // can any contiguous block of water, on the same row, move?
-                    // if so, lets defer our turn, and revisit later
-                    val neighbors = getNeighborsInRow(water, droplet)
+            // first, find settled water
+            water.filter { !it.settled && it.y == row }.forEach { droplet ->
+                val neighbors = getNeighborsInRow(water, droplet).toMutableList()
+                neighbors.add(droplet)
+                neighbors.sortBy { it.x }
 
-                    val neighborCanMove = neighbors.any { canMove(water, it, map) }
-                    if (neighborCanMove)
-                        droplet.deferred = true
-                    else
-                        droplet.settled = true
+                val leftMostNeighbor = neighbors[0]
+                val rightMostNeighbor = neighbors[neighbors.size - 1]
+                val clayLeft = map[leftMostNeighbor.y][leftMostNeighbor.x - 1]
+                val clayRight = map[rightMostNeighbor.y][rightMostNeighbor.x + 1]
+                if (clayLeft && clayRight)
+                    neighbors.forEach { it.settled = true }
+            }
+
+            var moved = 1
+            while (moved > 0) {
+                moved = 0
+
+                water.filter { !it.moved && !it.settled && it.y == row }.sortedBy { it.x }.forEach { droplet ->
+                    val waterAbove = water.firstOrNull { it.x == droplet.x && it.y == droplet.y - 1 }
+                    val clearBelow = isClearBelow(water, droplet, map)
+                    val clearLeft = isClearLeft(map, droplet, water)
+                    val clearRight = isClearRight(map, droplet, water)
+                    when {
+                        clearBelow -> move(droplet, 0, 1)
+                        clearLeft && clearRight  -> move(droplet, if (Random.nextBoolean()) 1 else -1, 0)
+                        clearLeft  -> move(droplet, -1, 0)
+                        clearRight -> move(droplet, 1, 0)
+                    }
+
+                    if (clearBelow || clearLeft || clearRight) moved++
+                    if ((clearLeft || clearRight) && waterAbove != null) move(waterAbove, 0, 1)
                 }
             }
         }
 
-        // move deferred water
-        water.filter { it.deferred }.forEach { droplet ->
-
-            when {
-                isClearBelow(water, droplet, map) -> droplet.y += 1
-                isClearLeft(map, droplet, water) -> droplet.x -= 1
-                isClearRight(map, droplet, water) -> droplet.x += 1
-                else -> droplet.blocked = true
-            }
-        }
-
-        // add new water from the spring
         water.add(Point2D(spring.x, spring.y + 1, false))
-        loop++
     }
 
     println("part 1: ${water.size}")
-//    println("part 2: ")
 }
 
 private fun getNeighborsInRow(water: List<Point2D>, droplet: Point2D): List<Point2D> {
@@ -84,10 +90,8 @@ private fun getNeighborsInRow(water: List<Point2D>, droplet: Point2D): List<Poin
     return neighbors
 }
 
-private fun canMove(water: List<Point2D>, droplet: Point2D, map: List<List<Boolean>>): Boolean {
-    return isClearBelow(water, droplet, map)
-            || isClearLeft(map, droplet, water)
-            || isClearRight(map, droplet, water)
+private fun move(droplet: Point2D, x: Int, y: Int) {
+    droplet.x += x; droplet.y += y; droplet.moved = true
 }
 
 private fun isClearRight(map: List<List<Boolean>>, droplet: Point2D, water: List<Point2D>): Boolean {
@@ -144,24 +148,32 @@ private fun initMap(input: List<String>): MutableList<MutableList<Boolean>> {
 }
 
 private fun initDrawing(lowestX: Int, map: List<List<Boolean>>) {
-    StdDraw.setCanvasSize(1100, 1100)
+    StdDraw.setCanvasSize(900, 900)
     StdDraw.setXscale(lowestX.toDouble(), map[0].size.toDouble())
 //    StdDraw.setYscale(0.0, map.size.toDouble())
-    StdDraw.setYscale(map.size.toDouble() * .95, map.size.toDouble())
+    StdDraw.setYscale(map.size.toDouble() * .90, map.size.toDouble())
     StdDraw.setPenRadius(.0002)
     StdDraw.enableDoubleBuffering()
 }
 
 private fun draw(map: List<List<Boolean>>, water: List<Point2D>) {
     StdDraw.clear()
-    drawMap(map)
+    if (Paths.get("17-temp.png").toFile().exists())
+    {
+        StdDraw.picture(map[0].size / 2.0, map.size / 2.0,
+                "17-temp.png", map[0].size.toDouble(), map.size.toDouble())
+//        StdDraw.picture(200.0, 200.0, "17-temp.png", 900.0, 900.0)
+    }
+    else
+        drawMap(map)
     drawWater(map, water)
     StdDraw.show()
     Thread.sleep(5)
 }
 
 private fun drawMap(map: List<List<Boolean>>) {
-    for (row in 0 until map.size / 20) // todo remove optimization "/ 20"
+    for (row in 0 until map.size / 10) // todo remove optimization
+//    for (row in 0 until map.size)
         for (col in 0 until map[row].size) {
             val x = col.toDouble()
             val y = (map.size - row).toDouble()
@@ -190,7 +202,6 @@ private fun drawWater(map: List<List<Boolean>>, waters: List<Point2D>) {
 
         val color = when {
             water.settled -> Color.BLUE
-            water.blocked -> StdDraw.BOOK_BLUE
             else -> StdDraw.BOOK_LIGHT_BLUE
         }
         StdDraw.setPenColor(color)
@@ -199,20 +210,6 @@ private fun drawWater(map: List<List<Boolean>>, waters: List<Point2D>) {
     }
 }
 
-class BottomSort : Comparator<Point2D> {
-    override fun compare(o1: Point2D?, o2: Point2D?): Int {
-        if (o1 == null && o2 == null) return 0
-        if (o1 == null) return -1
-        if (o2 == null) return 1
-
-        return if (o1.y == o2.y)
-            o1.x.compareTo(o2.x)
-        else
-            o1.y.compareTo(o2.y) * -1
-    }
-}
-
 data class Point2D(var x: Int, var y: Int,
                    var settled: Boolean = false,
-                   var deferred: Boolean = false,
-                   var blocked: Boolean = false)
+                   var moved: Boolean = false)
