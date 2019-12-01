@@ -2,15 +2,11 @@ let lines = System.IO.File.ReadLines("ClassLibrary1/01.txt") |> Seq.map int
 
 let massToFuel mass = (mass / 3) - 2
 
-let massToFuel2 mass =
-    let mutable fuel = massToFuel mass
-    let mutable totalFuel = 0
-
-    while fuel > 0 do
-        totalFuel <- totalFuel + fuel
-        fuel <- massToFuel fuel
-
-    totalFuel
+let rec massToFuel2 total mass =
+    let fuel = massToFuel mass
+    match fuel with
+        | _ when fuel >= 0 -> massToFuel2 (total + fuel) fuel
+        | _ -> total
 
 let part1Answer =
     lines
@@ -19,5 +15,5 @@ let part1Answer =
 
 let part2Answer =
     lines
-    |> Seq.map massToFuel2
+    |> Seq.map (massToFuel2 0)
     |> Seq.sum
