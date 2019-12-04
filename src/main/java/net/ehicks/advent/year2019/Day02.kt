@@ -12,7 +12,7 @@ fun main() {
     println("Part 2: " + solvePart2(input))
 }
 
-fun solvePart1(input: List<Int>): Int {
+private fun solvePart1(input: List<Int>): Int {
     val data = input.toMutableList()
 
     // restore the "1202 program alarm" state
@@ -26,7 +26,7 @@ fun solvePart1(input: List<Int>): Int {
     return data[0]
 }
 
-fun solvePart2(input: List<Int>): Int {
+private fun solvePart2(input: List<Int>): Int {
 
     for (noun in 1..99)
         for (verb in 1..99) {
@@ -45,7 +45,7 @@ fun solvePart2(input: List<Int>): Int {
     return 0
 }
 
-fun processOpCode(data: MutableList<Int>, index: Int): Int {
+private fun processOpCode(data: MutableList<Int>, index: Int): Int {
     val value = when (data[index]) {
         1 -> data[data[index + 1]] + data[data[index + 2]]
         2 -> data[data[index + 1]] * data[data[index + 2]]

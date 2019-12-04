@@ -9,11 +9,11 @@ fun main() {
     println("part 2: " + lines.stream().mapToInt { massToFuel2(it.toInt()) }.sum())
 }
 
-fun massToFuel(mass: Int): Int {
+private fun massToFuel(mass: Int): Int {
     return mass / 3 - 2
 }
 
-fun massToFuel2(mass: Int): Int {
+private fun massToFuel2(mass: Int): Int {
     var sum = massToFuel(mass)
     var totalSum = 0
     while (sum > 0) {
