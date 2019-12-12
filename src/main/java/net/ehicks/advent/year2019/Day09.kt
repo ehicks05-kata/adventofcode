@@ -15,12 +15,12 @@ fun main() {
 }
 
 private fun solvePart1(inputProgram: Map<Long, Long>): Long {
-    val programState = runProgramUntilHalt(inputProgram, listOf(1))
+    val programState = runProgramUntilHalt(inputProgram, listOf(1L))
     return programState.output.first()
 }
 
 private fun solvePart2(inputProgram: Map<Long, Long>): Long {
-    val programState = runProgramUntilHalt(inputProgram, listOf(2))
+    val programState = runProgramUntilHalt(inputProgram, listOf(2L))
     return programState.output.first()
 }
 
