@@ -2,14 +2,15 @@ package net.ehicks.advent.year2019
 
 import java.nio.file.Files
 import java.nio.file.Paths
-import kotlin.math.abs
-import kotlin.math.min
+import kotlin.math.atan2
+import kotlin.math.sqrt
 
 fun main() {
     val input = Files.readAllLines(Paths.get("src/main/resources/year2019/10.txt"))
-    val asteroidMap = input.map { row -> row.map { it == '#'  } }
-    println("Part 1: " + solvePart1(asteroidMap))
-    println("Part 2: " + solvePart2(asteroidMap))
+    val asteroidMap = input.map { row -> row.map { it == '#' } }
+    val monitoringStationLocation = solvePart1(asteroidMap)
+    println("Part 1: $monitoringStationLocation")
+    println("Part 2: " + solvePart2(asteroidMap, monitoringStationLocation.key))
 }
 
 private fun solvePart1(asteroidMap: List<List<Boolean>>): Map.Entry<Coord, Int> {
@@ -23,23 +24,8 @@ private fun solvePart1(asteroidMap: List<List<Boolean>>): Map.Entry<Coord, Int> 
             if (!asteroidMap[y][x])
                 continue
 
-            val angleCounts = mutableMapOf<Pair<Int, Int>, Int>()
             val origin = Coord(x, y)
-            val visited = mutableSetOf(origin)
-            var neighbors = mutableSetOf<Coord>()
-            neighbors.addAll(getNeighbors(origin, asteroidMap, visited))
-
-            while (neighbors.isNotEmpty())
-            {
-                // process each neighbor
-                neighbors
-                        .filter { asteroidMap[it.y][it.x] }
-                        .forEach { processNeighbor(origin, it, angleCounts) }
-
-                // replace 'neighbors' with each neighbor's neighbor
-                visited.addAll(neighbors)
-                neighbors = neighbors.flatMap { getNeighbors(it, asteroidMap, visited) }.toMutableSet()
-            }
+            val angleCounts = determineAngleCounts(origin, asteroidMap)
 
             originToAsteroidsInSight[origin] = angleCounts.size
         }
@@ -47,35 +33,67 @@ private fun solvePart1(asteroidMap: List<List<Boolean>>): Map.Entry<Coord, Int> 
     return originToAsteroidsInSight.maxBy { it.value }!!
 }
 
-private fun processNeighbor(origin: Coord, neighbor: Coord, angleCounts: MutableMap<Pair<Int, Int>, Int>) {
-    var deltaX = neighbor.x - origin.x
-    var deltaY = neighbor.y - origin.y
+private fun solvePart2(asteroidMap: List<List<Boolean>>, monitoringStationLocation: Coord): Pair<RelativeCoord, Int> {
+    val angleCounts = determineAngleCounts(monitoringStationLocation, asteroidMap)
 
-    for (i in min(abs(deltaX), abs(deltaY)) downTo 2)
-    {
-        if (i < 2)
-            break
-        if (deltaX % i == 0 && deltaY % i == 0)
-        {
-            deltaX /= i
-            deltaY /= i
-            break
+    val asteroidDestructionOrder = mutableListOf<RelativeCoord>()
+
+    while (angleCounts.isNotEmpty()) {
+        val keys = angleCounts.keys.sorted()
+        keys.forEach { angleKey ->
+            val asteroidsOfAngle = angleCounts[angleKey]!!
+            asteroidsOfAngle.sortBy { it.distance }
+            val destroyedAsteroid = asteroidsOfAngle.first()
+            asteroidDestructionOrder.add(destroyedAsteroid)
+
+            angleCounts[angleKey]!!.remove(destroyedAsteroid)
+            if (angleCounts[angleKey]!!.isEmpty())
+                angleCounts.remove(angleKey)
         }
     }
 
-    if (deltaX == 0) deltaY /= abs(deltaY)
-    if (deltaY == 0) deltaX /= abs(deltaX)
+    val twoHundredth = asteroidDestructionOrder[199]
 
-    angleCounts.merge(Pair(deltaX, deltaY), 1) { t, u -> t + u }
+    return Pair(twoHundredth, twoHundredth.x * 100 + twoHundredth.y)
 }
 
-private fun solvePart2(asteroidMap: List<List<Boolean>>): Int {
-    return 0
+private fun determineAngleCounts(origin: Coord, asteroidMap: List<List<Boolean>>): MutableMap<Double, MutableList<RelativeCoord>> {
+    val angleCounts = mutableMapOf<Double, MutableList<RelativeCoord>>()
+    val visited = mutableSetOf(origin)
+    var neighbors = mutableSetOf<Coord>()
+    neighbors.addAll(getNeighbors(origin, asteroidMap, visited))
+
+    while (neighbors.isNotEmpty()) {
+        // process each neighbor
+        neighbors
+                .filter { asteroidMap[it.y][it.x] }
+                .forEach { processNeighbor(origin, it, angleCounts) }
+
+        // replace 'neighbors' with each neighbor's neighbor
+        visited.addAll(neighbors)
+        neighbors = neighbors.flatMap { getNeighbors(it, asteroidMap, visited) }.toMutableSet()
+    }
+    return angleCounts
+}
+
+private fun processNeighbor(origin: Coord, neighbor: Coord, angleCounts: MutableMap<Double, MutableList<RelativeCoord>>) {
+    val deltaX = neighbor.x - origin.x
+    val deltaY = neighbor.y - origin.y
+    val distance = sqrt((deltaX * deltaX + deltaY * deltaY).toDouble())
+
+    var angle = Math.toDegrees(atan2(deltaY.toDouble(), deltaX.toDouble())) - Math.toDegrees(atan2(-1.0, 0.0))
+    if (angle < 0)
+        angle += 360
+
+    val coords = angleCounts.getOrDefault(angle, mutableListOf())
+    coords.add(RelativeCoord(neighbor.x, neighbor.y, distance))
+    angleCounts[angle] = coords
 }
 
 private data class Coord(val x: Int, val y: Int)
+private data class RelativeCoord(val x: Int, val y: Int, val distance: Double)
 
-private fun getNeighbors(origin: Coord, asteroidMap: List<List<Boolean>>, visited : Set<Coord>): Set<Coord> {
+private fun getNeighbors(origin: Coord, asteroidMap: List<List<Boolean>>, visited: Set<Coord>): Set<Coord> {
     val neighbors = mutableSetOf<Coord>()
     if (origin.x > 0) neighbors.add(Coord(origin.x - 1, origin.y))
     if (origin.y > 0) neighbors.add(Coord(origin.x, origin.y - 1))
