@@ -37,18 +37,18 @@ private fun phasePermutationToFinalOutput1(inputProgram: List<Int>, phasePermuta
 }
 
 private fun phasePermutationToFinalOutput2(inputProgram: List<Int>, phasePermutation: List<Int>): Int {
-    var programState1 = runProgram2UntilOutputOrHalt(inputProgram, listOf(phasePermutation[0], 0))
-    var programState2 = runProgram2UntilOutputOrHalt(inputProgram, listOf(phasePermutation[1], programState1.output.last()))
-    var programState3 = runProgram2UntilOutputOrHalt(inputProgram, listOf(phasePermutation[2], programState2.output.last()))
-    var programState4 = runProgram2UntilOutputOrHalt(inputProgram, listOf(phasePermutation[3], programState3.output.last()))
-    var programState5 = runProgram2UntilOutputOrHalt(inputProgram, listOf(phasePermutation[4], programState4.output.last()))
+    var programState1 = runProgram2UntilOutputOrHalt("IC1", inputProgram, listOf(phasePermutation[0], 0))
+    var programState2 = runProgram2UntilOutputOrHalt("IC2", inputProgram, listOf(phasePermutation[1], programState1.output.last()))
+    var programState3 = runProgram2UntilOutputOrHalt("IC3", inputProgram, listOf(phasePermutation[2], programState2.output.last()))
+    var programState4 = runProgram2UntilOutputOrHalt("IC4", inputProgram, listOf(phasePermutation[3], programState3.output.last()))
+    var programState5 = runProgram2UntilOutputOrHalt("IC5", inputProgram, listOf(phasePermutation[4], programState4.output.last()))
 
     while (true) {
-        programState1 = runProgram2UntilOutputOrHalt(programState1, listOf(programState5.output.last()))
-        programState2 = runProgram2UntilOutputOrHalt(programState2, listOf(programState1.output.last()))
-        programState3 = runProgram2UntilOutputOrHalt(programState3, listOf(programState2.output.last()))
-        programState4 = runProgram2UntilOutputOrHalt(programState4, listOf(programState3.output.last()))
-        programState5 = runProgram2UntilOutputOrHalt(programState5, listOf(programState4.output.last()))
+        programState1 = runProgram2UntilOutputOrHalt("IC1", programState1, listOf(programState5.output.last()))
+        programState2 = runProgram2UntilOutputOrHalt("IC2", programState2, listOf(programState1.output.last()))
+        programState3 = runProgram2UntilOutputOrHalt("IC3", programState3, listOf(programState2.output.last()))
+        programState4 = runProgram2UntilOutputOrHalt("IC4", programState4, listOf(programState3.output.last()))
+        programState5 = runProgram2UntilOutputOrHalt("IC5", programState5, listOf(programState4.output.last()))
 
         val halted = programState1.halted
                 || programState2.halted
@@ -63,7 +63,7 @@ private fun phasePermutationToFinalOutput2(inputProgram: List<Int>, phasePermuta
     return programState5.output.last()
 }
 
-private fun getPhasePermutations(phases: Set<Int>): MutableSet<List<Int>> {
+fun getPhasePermutations(phases: Set<Int>): MutableSet<List<Int>> {
     val completePermutations = mutableSetOf<List<Int>>()
 
     for (phase in phases)
@@ -80,7 +80,7 @@ private fun getPhasePermutations(phases: Set<Int>): MutableSet<List<Int>> {
     return completePermutations
 }
 
-private fun getPhasePermutationsRecur(completePermutations: MutableSet<List<Int>>, inProgressPermutation: MutableSet<Int>, phases: MutableSet<Int>) {
+fun getPhasePermutationsRecur(completePermutations: MutableSet<List<Int>>, inProgressPermutation: MutableSet<Int>, phases: MutableSet<Int>) {
     if (inProgressPermutation.size == 5)
     {
         completePermutations.add(inProgressPermutation.toList())
@@ -109,7 +109,8 @@ private fun runProgramUntilHalt(inputProgram: List<Int>, input: List<Int>): Prog
     return programState
 }
 
-private fun runProgram2UntilOutputOrHalt(inputProgram: List<Int>, input: List<Int>): ProgramState {
+private fun runProgram2UntilOutputOrHalt(id: String, inputProgram: List<Int>, input: List<Int>): ProgramState {
+    println("$id input: $input")
     var programState = ProgramState(inputProgram.toMutableList(), 0, input, 0, mutableListOf())
     while (programState.program[programState.programIndex] != 99)
     {
@@ -118,20 +119,22 @@ private fun runProgram2UntilOutputOrHalt(inputProgram: List<Int>, input: List<In
         val outputSize = programState.output.size
 
         if (prevOutputSize != outputSize)
-            return programState
+            break
     }
 
+    println("$id output: ${programState.output}")
     return programState
 }
 
-private fun runProgram2UntilOutputOrHalt(inputProgramState: ProgramState, input: List<Int>): ProgramState {
+private fun runProgram2UntilOutputOrHalt(id: String, inputProgramState: ProgramState, input: List<Int>): ProgramState {
+    println("$id input: $input")
     var programState = ProgramState(inputProgramState.program, inputProgramState.programIndex, input, 0, inputProgramState.output)
     while (true)
     {
         if (programState.program[programState.programIndex] == 99)
         {
             programState.halted = true
-            return programState
+            break
         }
 
         val prevOutputSize = programState.output.size
@@ -139,8 +142,11 @@ private fun runProgram2UntilOutputOrHalt(inputProgramState: ProgramState, input:
         val outputSize = programState.output.size
 
         if (prevOutputSize != outputSize)
-            return programState
+            break
     }
+
+    println("$id output: ${programState.output}")
+    return programState
 }
 
 data class ProgramState(val program: MutableList<Int>, var programIndex: Int, val input: List<Int>, var inputIndex: Int, val output: MutableList<Int>, var halted: Boolean = false)
@@ -154,6 +160,8 @@ private fun processOpCode(programState: ProgramState): ProgramState {
     val param1Mode = if (instruction.length > 2) Integer.parseInt(instruction.substring(2, 3)) else 0
     val param2Mode = if (instruction.length > 3) Integer.parseInt(instruction.substring(3, 4)) else 0
 
+    logOperation(program, index, opCode, param1Mode, param2Mode)
+    
     val updatedProgramIndex = when (opCode) {
         1 -> add(program, index, param1Mode, param2Mode)
         2 -> mult(program, index, param1Mode, param2Mode)
@@ -173,6 +181,35 @@ private fun processOpCode(programState: ProgramState): ProgramState {
     val updatedInputIndex = if (opCode == 3) programState.inputIndex + 1 else programState.inputIndex
 
     return ProgramState(program, updatedProgramIndex, programState.input, updatedInputIndex, programState.output)
+}
+
+private fun logOperation(data: MutableList<Int>, index: Int, opCode: Int, param1Mode: Int, param2Mode: Int) {
+    var param1 = -1
+    try { param1 = if (param1Mode == 0) data[data[index + 1]]
+        else data[index + 1]
+    } catch (e: Exception) {    }
+
+    var param2 = -1
+    try { param2 = if (param2Mode == 0) data[data[index + 2]]
+        else data[index + 2]
+    } catch (e: Exception) {    }
+
+    var param3 = -1
+    try { param3 = data[index + 3] } catch (e: Exception) {    }
+
+    val formattedIndex = String.format("%4d", index)
+    when (opCode) {
+        1 -> println("    add@$formattedIndex: $param1, $param2, $param3")
+        2 -> println("    mul@$formattedIndex: $param1, $param2, $param3")
+        3 -> println("     in@$formattedIndex: $param1")
+        4 -> println("    out@$formattedIndex: $param1")
+        5 -> println("    jit@$formattedIndex: $param1, $param2")
+        6 -> println("    jif@$formattedIndex: $param1, $param2")
+        7 -> println("     lt@$formattedIndex: $param1, $param2, $param3")
+        8 -> println("     eq@$formattedIndex: $param1, $param2, $param3")
+        9 -> println("    rbo@$formattedIndex: $param1, $param2, $param3")
+        else -> println("    UNKNOWN@$formattedIndex")
+    }
 }
 
 private fun mult(data: MutableList<Int>, index: Int, param1Mode: Int, param2Mode: Int): Int {

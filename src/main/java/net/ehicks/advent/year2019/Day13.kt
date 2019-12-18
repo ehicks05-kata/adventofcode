@@ -32,7 +32,7 @@ private fun solve(ic: IC) {
             break
 
         ic.run()
-        val output = ic.getOutput()
+        val output = ic.getAndClearOutput()
 
         output.chunked(3).forEach { chunk ->
             val x = chunk[0].toInt()
