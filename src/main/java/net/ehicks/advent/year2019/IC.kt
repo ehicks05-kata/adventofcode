@@ -14,6 +14,7 @@ fun main() {
 
 class IC(program: String,
          private val log: Boolean = false,
+         private val id: String = "Unnamed IC",
          var machineState: MachineState = MachineState()) {
 
     init {
@@ -27,11 +28,13 @@ class IC(program: String,
     }
 
     fun run(): MachineState {
-        var state = this.machineState
-        while (!state.halted && !state.waitingForInput)
-            state = processOpCode(state)
+        if (this.machineState.waitingForInput && this.machineState.input.isNotEmpty())
+            this.machineState.waitingForInput = false
 
-        return state
+        while (!this.machineState.halted && !this.machineState.waitingForInput)
+            this.machineState = processOpCode(this.machineState)
+
+        return this.machineState
     }
 
     fun feedInput(input: Long) {
@@ -39,12 +42,16 @@ class IC(program: String,
     }
 
     fun getOutput(): List<Long> {
+        return this.machineState.output.toList()
+    }
+
+    fun getAndClearOutput(): List<Long> {
         val output = this.machineState.output.toList()
         this.machineState.output.clear()
         return output
     }
 
-    data class MachineState(val mem: MutableMap<Long, Long> = mutableMapOf(), val input: Deque<Long> = ArrayDeque(),
+    data class MachineState(val mem: MutableMap<Long, Long> = mutableMapOf(), val input: Queue<Long> = ArrayDeque(),
                             var programIndex: Long = 0, val output: MutableList<Long> = mutableListOf(),
                             var halted: Boolean = false, var relativeBase: Long = 0, var waitingForInput: Boolean = false)
 
@@ -61,6 +68,9 @@ class IC(program: String,
 
         val (param1, param2, param3) = getParams(memory, index, machineState.relativeBase, instruction, opCode)
 
+        if (log)
+            logOperation(index, opCode, param1, param2, param3, machineState)
+
         val updatedProgramIndex = when (opCode) {
             1 -> add(memory, index, param1, param2, param3)
             2 -> mult(memory, index, param1, param2, param3)
@@ -71,11 +81,8 @@ class IC(program: String,
             7 -> lessThan(memory, index, param1, param2, param3)
             8 -> equals(memory, index, param1, param2, param3)
             9 -> relativeBaseOffset(index, param1, machineState)
-            else -> 0
+            else -> throw Exception("Invalid opcode: $opCode")
         }
-
-        if (log)
-            logOperation(index, opCode, param1, param2, param3, machineState)
 
         return MachineState(memory, machineState.input, updatedProgramIndex, machineState.output, machineState.halted, machineState.relativeBase)
     }
@@ -83,16 +90,16 @@ class IC(program: String,
     private fun logOperation(index: Long, opCode: Int, param1: Long, param2: Long, param3: Long, machineState: MachineState) {
         val formattedIndex = String.format("%4d", index)
         when (opCode) {
-            1 -> println("add@$formattedIndex: $param1, $param2, $param3")
-            2 -> println("mul@$formattedIndex: $param1, $param2, $param3")
-            3 -> println(" in@$formattedIndex: $param1")
-            4 -> println("out@$formattedIndex: $param1")
-            5 -> println("jit@$formattedIndex: $param1, $param2")
-            6 -> println("jif@$formattedIndex: $param1, $param2")
-            7 -> println(" lt@$formattedIndex: $param1, $param2, $param3")
-            8 -> println(" eq@$formattedIndex: $param1, $param2, $param3")
-            9 -> println("rbo@$formattedIndex: ${machineState.relativeBase} + $param1 -> ${machineState.relativeBase + param1}")
-            else -> 0
+            1 -> println("$id add@$formattedIndex: $param1, $param2, $param3")
+            2 -> println("$id mul@$formattedIndex: $param1, $param2, $param3")
+            3 -> println("$id  in@$formattedIndex: $param1")
+            4 -> println("$id out@$formattedIndex: $param1")
+            5 -> println("$id jit@$formattedIndex: $param1, $param2")
+            6 -> println("$id jif@$formattedIndex: $param1, $param2")
+            7 -> println("$id  lt@$formattedIndex: $param1, $param2, $param3")
+            8 -> println("$id  eq@$formattedIndex: $param1, $param2, $param3")
+            9 -> println("$id rbo@$formattedIndex: ${machineState.relativeBase} + $param1 -> ${machineState.relativeBase + param1}")
+            else -> println("$id UNKNOWN@$formattedIndex: $param1, $param2, $param3")
         }
     }
 
