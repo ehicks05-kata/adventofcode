@@ -52,7 +52,6 @@ const findSmallestDir = (
     [...childSizes, dir.size!].filter((o) => o >= sizeLimit)
   );
   if (!smallestValidSize || smallestValidSize >= bestMatch) return bestMatch;
-  console.log(smallestValidSize);
   return smallestValidSize;
 };
 
@@ -135,8 +134,11 @@ const run = async () => {
 
   const part1 = sumDirSizes(root, 100_000);
 
-  const spaceToFreeUp = 70_000_000 - totalSize;
-  console.log({ totalSize, spaceToFreeUp });
+  const driveSize = 70_000_000;
+  const spaceNeeded = 30_000_000;
+  const spaceAvailable = driveSize - totalSize;
+  const spaceToFreeUp = spaceNeeded - spaceAvailable;
+  console.log({ driveSize, spaceNeeded, totalSize, spaceAvailable, spaceToFreeUp });
   const part2 = findSmallestDir(root, spaceToFreeUp);
   console.log(`part1: ${part1}`);
   console.log(`part2: ${part2}`);
