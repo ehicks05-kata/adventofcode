@@ -9,13 +9,13 @@ const isEdge = (
 ) => {
   return (
     rowIndex === 0 ||
-    rowIndex === rows.length - 1 ||
     colIndex === 0 ||
+    rowIndex === rows.length - 1 ||
     colIndex === cols.length - 1
   );
 };
 
-const countVisibleTrees = (rows: string[]) => {
+const countTreesVisibleFromOutside = (rows: string[]) => {
   let visibleCount = 0;
   rows.forEach((row, rowIndex) => {
     const cells = row.split("");
@@ -44,18 +44,6 @@ const countVisibleTrees = (rows: string[]) => {
         .map(Number)
         .every((o) => o < currentTree);
 
-      if (rowIndex === 1 && colIndex === 9) {
-        console.log({
-          rowIndex,
-          colIndex,
-          currentTree,
-          visibleFromTop,
-          visibleFromBottom,
-          visibleFromLeft,
-          visibleFromRight,
-        });
-      }
-
       if (
         visibleFromTop ||
         visibleFromBottom ||
@@ -71,11 +59,72 @@ const countVisibleTrees = (rows: string[]) => {
   return visibleCount;
 };
 
-const run = async () => {
-  const lines = (await readLines("inputs/2022/08.txt")).filter((o) => o.length);
+const getHighestScenicScore = (rows: string[]) => {
+  let highestScenicScore = 0;
 
-  const part1 = countVisibleTrees(lines);
-  const part2 = 0;
+  rows.forEach((row, rowIndex) => {
+    const cells = row.split("");
+    cells.forEach((cell, colIndex) => {
+      if (isEdge(rows, rowIndex, cells, colIndex)) {
+        return;
+      }
+
+      const currentTree = Number(cell);
+
+      let visibleUp = 0;
+      for (let i = 1; rowIndex - i >= 0; i++) {
+        visibleUp++;
+        const otherTree = Number(rows[rowIndex - i].split("")[colIndex]);
+        if (otherTree >= currentTree) {
+          break;
+        }
+      }
+
+      let visibleDown = 0;
+      for (let i = 1; rowIndex + i < rows.length; i++) {
+        visibleDown++;
+        const otherTree = Number(rows[rowIndex + i].split("")[colIndex]);
+        if (otherTree >= currentTree) {
+          break;
+        }
+      }
+
+      let visibleLeft = 0;
+      for (let i = 1; colIndex - i >= 0; i++) {
+        visibleLeft++;
+        const otherTree = Number(rows[rowIndex].split("")[colIndex - i]);
+        if (otherTree >= currentTree) {
+          break;
+        }
+      }
+
+      let visibleRight = 0;
+      for (let i = 1; colIndex + i < cells.length; i++) {
+        visibleRight++;
+        const otherTree = Number(rows[rowIndex].split("")[colIndex + i]);
+        if (otherTree >= currentTree) {
+          break;
+        }
+      }
+
+      const scenicScore = visibleUp * visibleDown * visibleLeft * visibleRight;
+      if (scenicScore > highestScenicScore) {
+        highestScenicScore = scenicScore;
+        return;
+      }
+    });
+  });
+
+  return highestScenicScore;
+};
+
+const run = async () => {
+  const lines = (await readLines("inputs/2022/08.txt"))
+    .filter((o) => o.length)
+    .map((o) => o.trim());
+
+  const part1 = countTreesVisibleFromOutside(lines);
+  const part2 = getHighestScenicScore(lines);
   console.log(`part1: ${part1}`);
   console.log(`part2: ${part2}`);
 };
